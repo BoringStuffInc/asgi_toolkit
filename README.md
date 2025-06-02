@@ -13,9 +13,9 @@ A middleware toolkit for Python web applications.
 
 ## Installation
 
-```bash
-pip install asgi-toolkit
-```
+~pip install asgi-toolkit~
+
+Maybe coming to PyPI sometime soon
 
 ## Usage Examples
 
@@ -61,8 +61,8 @@ from asgi_toolkit.headers import HeadersMiddleware, HeadersConfig, HeaderRule
 headers_config = HeadersConfig(
     rules=[
         HeaderRule(
-            name="x-api-key", 
-            required=True, 
+            name="x-api-key",
+            required=True,
             validator=lambda x: len(x) == 32
         )
     ]
@@ -94,7 +94,7 @@ rate_limit_config = RateLimitConfig(
 
 app = FastAPI()
 app.add_middleware(
-    RateLimitMiddleware, 
+    RateLimitMiddleware,
     backend=InMemoryBackend(),
     config=rate_limit_config
 )
