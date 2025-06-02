@@ -9,6 +9,7 @@ A middleware toolkit for Python web applications.
 - Header Validation: Robust header processing
 - Type-Safe ASGI Protocols
 - Rate Limiting: Request rate control
+- Profiling: Request profiling
 - Framework Agnostic
 
 ## Installation
