@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True, frozen=True)
 class PolicyConfig:
     """Rate limiting policy configuration."""
 
@@ -17,12 +17,11 @@ class PolicyConfig:
             raise ValueError("window must be positive")
 
 
-# Type definitions for policy configuration
 MethodPolicyDict = dict[str, PolicyConfig]  # {"GET": PolicyConfig(100, 60)}
 RoutePolicyDict = dict[str, PolicyConfig | MethodPolicyDict]  # Route -> policy or method-specific policies
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True, frozen=True)
 class RateLimitConfig:
     """Configuration for rate limiting middleware."""
 

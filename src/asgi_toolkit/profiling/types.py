@@ -15,19 +15,19 @@ class Profiler(Protocol):
         """Generates and returns a profiling report as a string."""
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ReportOutputFile:
     filepath: Path
     type: Literal["file"] = "file"
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ReportOutputLogger:
     logger: logging.Logger
     type: Literal["logger"] = "logger"
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ReportOutputResponse:
     type: Literal["response"]
 

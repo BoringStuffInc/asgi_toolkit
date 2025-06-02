@@ -11,7 +11,7 @@ HeaderValidator: TypeAlias = Callable[[str], bool]
 ErrorFormatter: TypeAlias = Callable[[str, str], dict[str, Any]]
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True, frozen=True)
 class HeaderRule:
     """Configuration for a single header extraction and validation rule.
 
@@ -30,7 +30,7 @@ class HeaderRule:
     error_status_invalid: HTTPStatus = HTTPStatus.BAD_REQUEST
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class HeadersConfig:
     rules: list[HeaderRule] = field(default_factory=list)
 
