@@ -1,0 +1,42 @@
+[project]
+name = "asgi-toolkit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "BoringStuffInc", email = "boringstuffinc@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.29.0",
+    "fastapi>=0.115.12",
+    "litestar>=2.16.0",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+]
+
+[tool.mypy]
+strict_optional = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+show_error_codes = true
+show_error_context = true
+show_traceback = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore:Call to '__init__' function with deprecated usage of input argument/s 'retry_on_timeout':DeprecationWarning",
+    "ignore:Call to deprecated close. (Use aclose\\(\\) instead):DeprecationWarning",
+]
