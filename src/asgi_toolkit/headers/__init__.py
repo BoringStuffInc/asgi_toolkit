@@ -34,6 +34,7 @@ class HeaderRule:
 class HeadersConfig:
     rules: list[HeaderRule] = field(default_factory=list)
 
+
 class HeadersMiddleware:
     """ASGI middleware for extracting and validating HTTP headers."""
 
