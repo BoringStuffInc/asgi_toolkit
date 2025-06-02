@@ -76,10 +76,7 @@ app.add_middleware(HeadersMiddleware, config=headers_config)
 
 ```python
 from fastapi import FastAPI
-from asgi_toolkit.rate_limiting import RateLimitMiddleware
-from asgi_toolkit.rate_limiting.backends import InMemoryBackend
-
-from asgi_toolkit.rate_limiting import RateLimitConfig, PolicyConfig
+from asgi_toolkit.rate_limiting import RateLimitMiddleware, InMemoryBackend, RateLimitConfig, PolicyConfig
 
 rate_limit_config = RateLimitConfig(
     default_limit=100,  # Default: 100 requests
