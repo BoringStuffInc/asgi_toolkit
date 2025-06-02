@@ -35,18 +35,6 @@ format:
 # Combines linting, type checking, and testing
 check: lint typecheck
 
-# Clean up project artifacts and temporary files
-# Removes cache files, build artifacts, and other generated files
-clean:
-    find . -type d -name "__pycache__" -exec rm -rf {} +
-    find . -type f -name "*.pyc" -delete
-    find . -type f -name "*.pyo" -delete
-    find . -type f -name "*.pyd" -delete
-    find . -type f -name "*.so" -delete
-    find . -type d -name "*.egg-info" -exec rm -rf {} +
-    find . -type d -name "*.egg" -exec rm -rf {} +
-    rm -rf .venv/ build/ dist/ .pytest_cache/ .coverage htmlcov/
-
 # Build distribution packages
 # Uses uv to build project distribution files
 build:
