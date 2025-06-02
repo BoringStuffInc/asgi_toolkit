@@ -100,6 +100,28 @@ app.add_middleware(
 )
 ```
 
+### Profiling Middleware
+
+```python
+from fastapi import FastAPI
+from asgi_toolkit.profiling import ProfilingMiddleware, ProfilingConfig, CProfileProfiler, ReportOutputResponse
+
+app = FastAPI()
+profiling_config = ProfilingConfig(
+    profiler=CProfileProfiler(),
+    report_output=ReportOutputResponse(),
+    activation_query_param="profile",
+)
+app.add_middleware(
+    ProfilingMiddleware,
+    config=profiling_config,
+)
+
+@app.get("/")
+async def root():
+    return {"message": "Hello, World!"}
+```
+
 ## Compatibility
 
 - Python 3.10+

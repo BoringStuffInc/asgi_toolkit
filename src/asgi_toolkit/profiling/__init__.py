@@ -7,6 +7,7 @@ from asgi_toolkit.profiling.types import (
     ReportOutputResponse,
     Profiler,
 )
+from asgi_toolkit.profiling.config import ProfilingConfig
 
 __all__: tuple[str, ...] = (
     "ProfilingMiddleware",
@@ -16,4 +17,5 @@ __all__: tuple[str, ...] = (
     "ReportOutputFile",
     "ReportOutputLogger",
     "ReportOutputResponse",
+    "ProfilingConfig",
 )

@@ -17,6 +17,7 @@ from asgi_toolkit.profiling import (
     ReportOutputFile,
     ReportOutputLogger,
     ReportOutputResponse,
+    ProfilingConfig,
 )
 
 
@@ -40,12 +41,17 @@ def create_client(framework, activation_method, report_output, profiler=None):
     if profiler is None:
         profiler = MockManualProfiler()
 
-    middleware_kwargs = {
+    config_kwargs = {
+        "profiler": profiler,
         "report_output": report_output,
-        f"activation_{activation_method}_param"
-        if activation_method == "query"
-        else f"activation_{activation_method}": "profile" if activation_method == "query" else "X-Profile",
     }
+
+    if activation_method == "query":
+        config_kwargs["activation_query_param"] = "profile"
+    else:
+        config_kwargs["activation_header"] = "X-Profile"
+
+    profiling_config = ProfilingConfig(**config_kwargs)
 
     if framework == "fastapi":
         app = FastAPI()
@@ -54,7 +60,7 @@ def create_client(framework, activation_method, report_output, profiler=None):
         async def read_root():
             return {"Hello": "world"}
 
-        app.add_middleware(ProfilingMiddleware, profiler=profiler, **middleware_kwargs)
+        app.add_middleware(ProfilingMiddleware, config=profiling_config)
         return FastAPITestClient(app), profiler
     else:  # litestar
 
@@ -64,7 +70,7 @@ def create_client(framework, activation_method, report_output, profiler=None):
 
         app = Litestar(
             route_handlers=[read_root],
-            middleware=[DefineMiddleware(ProfilingMiddleware, profiler=profiler, **middleware_kwargs)],
+            middleware=[DefineMiddleware(ProfilingMiddleware, config=profiling_config)],
         )
         return LitestarTestClient(app), profiler
 
@@ -198,11 +204,14 @@ class TestProfilingMiddleware:
         async def websocket_send(message):
             pass
 
-        middleware = ProfilingMiddleware(
-            dummy_websocket_app,
+        config = ProfilingConfig(
             profiler=profiler,
             report_output=ReportOutputResponse(type="response"),
             activation_query_param="profile",
+        )
+        middleware = ProfilingMiddleware(
+            dummy_websocket_app,
+            config=config,
         )
 
         asyncio.run(middleware(websocket_scope, websocket_receive, websocket_send))
