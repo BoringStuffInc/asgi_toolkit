@@ -2,7 +2,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from http import HTTPStatus
-from typing import Any, Self, TypeAlias
+from typing import Any, TypeAlias
 
 from asgi_toolkit.context import http_request_context, new_context
 from asgi_toolkit.protocol import ASGIApp, Receive, Scope, Send
@@ -33,26 +33,6 @@ class HeaderRule:
 @dataclass(slots=True)
 class HeadersConfig:
     rules: list[HeaderRule] = field(default_factory=list)
-
-    def add_header(
-        self,
-        name: str,
-        *,
-        required: bool = False,
-        validator: HeaderValidator | None = None,
-        error_status_missing: HTTPStatus = HTTPStatus.BAD_REQUEST,
-        error_status_invalid: HTTPStatus = HTTPStatus.BAD_REQUEST,
-    ) -> Self:
-        new_rule = HeaderRule(
-            name=name,
-            required=required,
-            validator=validator,
-            error_status_missing=error_status_missing,
-            error_status_invalid=error_status_invalid,
-        )
-        self.rules.append(new_rule)
-        return self
-
 
 class HeadersMiddleware:
     """ASGI middleware for extracting and validating HTTP headers."""

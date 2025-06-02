@@ -55,15 +55,16 @@ app.add_middleware(
 
 ```python
 from fastapi import FastAPI
-from asgi_toolkit.headers import HeadersMiddleware, HeadersConfig
+from asgi_toolkit.headers import HeadersMiddleware, HeadersConfig, HeaderRule
 
-headers_config = (
-    HeadersConfig()
-    .add_header(
-        "x-api-key", 
-        required=True, 
-        validator=lambda x: len(x) == 32
-    )
+headers_config = HeadersConfig(
+    rules=[
+        HeaderRule(
+            name="x-api-key", 
+            required=True, 
+            validator=lambda x: len(x) == 32
+        )
+    ]
 )
 
 app = FastAPI()

@@ -1,13 +1,12 @@
 import pytest
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
 from litestar import Litestar, get
 from litestar.testing import TestClient as LitestarTestClient
 from litestar.middleware import DefineMiddleware
-
 from asgi_toolkit.context import http_request_context
 from asgi_toolkit.headers import HeadersMiddleware, HeadersConfig, HeaderRule
 
@@ -21,29 +20,28 @@ def always_invalid(_value: str) -> bool:
 
 
 @pytest.fixture(params=["fastapi", "litestar"])
-def create_client(request):
-    def factory(config):
-        match request.param:
-            case "fastapi":
-                app = FastAPI()
+def create_client(request: pytest.FixtureRequest) -> Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient]:
+    def factory(config: HeadersConfig) -> FastAPITestClient | LitestarTestClient:
+        if request.param == "fastapi":
+            fastapi_app: FastAPI = FastAPI()
 
-                @app.get("/")
-                def read_headers():
-                    return dict(http_request_context)
+            @fastapi_app.get("/")
+            def read_headers() -> dict[str, Any]:
+                return dict(http_request_context)
 
-                app.add_middleware(HeadersMiddleware, config=config)
-                client = FastAPITestClient(app)
-            case "litestar":
+            fastapi_app.add_middleware(HeadersMiddleware, config=config)
+            client: FastAPITestClient | LitestarTestClient = FastAPITestClient(fastapi_app)
+        else:  # litestar
 
-                @get("/")
-                async def read_headers() -> dict[str, Any]:
-                    return dict(http_request_context)
+            @get("/")
+            async def read_headers() -> dict[str, Any]:
+                return dict(http_request_context)
 
-                app = Litestar(
-                    route_handlers=[read_headers],
-                    middleware=[DefineMiddleware(HeadersMiddleware, config=config)],
-                )
-                client = LitestarTestClient(app)
+            litestar_app = Litestar(
+                route_handlers=[read_headers],
+                middleware=[DefineMiddleware(HeadersMiddleware, config=config)],
+            )
+            client = LitestarTestClient(litestar_app)
 
         return client
 
@@ -68,11 +66,15 @@ class TestHeadersMiddleware:
             ),
         ],
     )
-    def test_successful_header_processing(self, create_client, header_config, request_headers, expected_response):
-        config = HeadersConfig()
-        for header_name, header_opts in header_config.items():
-            config.add_header(header_name, **header_opts)
-
+    def test_successful_header_processing(
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        header_config: dict[str, Any],
+        request_headers: dict[str, str],
+        expected_response: dict[str, str],
+    ) -> None:
+        rules = [HeaderRule(name=name, **opts) for name, opts in header_config.items()]
+        config = HeadersConfig(rules=rules)
         client = create_client(config)
 
         response = client.get("/", headers=request_headers)
@@ -91,7 +93,13 @@ class TestHeadersMiddleware:
             ({"X-Factory-Header": "factory_value"}, HTTPStatus.OK, {"X-Factory-Header": "factory_value"}),
         ],
     )
-    def test_headers_middleware_factory(self, create_client, headers, expected_status, expected_data):
+    def test_headers_middleware_factory(
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        headers: dict[str, str],
+        expected_status: HTTPStatus,
+        expected_data: dict[str, Any],
+    ) -> None:
         config = HeadersConfig(rules=[HeaderRule("X-Factory-Header", required=True)])
         client = create_client(config)
 
@@ -100,14 +108,17 @@ class TestHeadersMiddleware:
         assert response.json() == expected_data
 
     @pytest.mark.parametrize("custom_status", [None, HTTPStatus.UNAUTHORIZED])
-    def test_missing_required_header(self, create_client, custom_status):
-        header_opts = {"required": True}
+    def test_missing_required_header(
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        custom_status: HTTPStatus | None,
+    ) -> None:
+        header_opts: dict[str, Any] = {"required": True}
         if custom_status:
             header_opts["error_status_missing"] = custom_status
 
-        config = HeadersConfig()
-        config.add_header("X-Required-Header", **header_opts)
-
+        rules = [HeaderRule("X-Required-Header", **header_opts)]
+        config = HeadersConfig(rules=rules)
         client = create_client(config)
 
         response = client.get("/")
@@ -127,10 +138,14 @@ class TestHeadersMiddleware:
             ("abc", False),
         ],
     )
-    def test_header_with_validator(self, create_client, header_value, is_valid):
-        config = HeadersConfig()
-        config.add_header("X-Numeric-Header", validator=is_numeric)
-
+    def test_header_with_validator(
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        header_value: str,
+        is_valid: bool,
+    ) -> None:
+        rules = [HeaderRule("X-Numeric-Header", validator=is_numeric)]
+        config = HeadersConfig(rules=rules)
         client = create_client(config)
 
         response = client.get("/", headers={"X-Numeric-Header": header_value})
@@ -152,10 +167,14 @@ class TestHeadersMiddleware:
             ("X-CASE-HEADER", "X-Case-Header"),
         ],
     )
-    def test_case_insensitive_headers(self, create_client, sent_header, expected_key):
-        config = HeadersConfig()
-        config.add_header("X-Case-Header")
-
+    def test_case_insensitive_headers(
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        sent_header: str,
+        expected_key: str,
+    ) -> None:
+        rules = [HeaderRule("X-Case-Header")]
+        config = HeadersConfig(rules=rules)
         client = create_client(config)
 
         response = client.get("/", headers={sent_header: "case_value"})
@@ -185,11 +204,16 @@ class TestHeadersMiddleware:
         ],
     )
     def test_custom_status_codes(
-        self, create_client, header_name, header_config, request_headers, expected_status, expected_error
-    ):
-        config = HeadersConfig()
-        config.add_header(header_name, **header_config)
-
+        self,
+        create_client: Callable[[HeadersConfig], FastAPITestClient | LitestarTestClient],
+        header_name: str,
+        header_config: dict[str, Any],
+        request_headers: dict[str, str],
+        expected_status: HTTPStatus,
+        expected_error: dict[str, Any],
+    ) -> None:
+        rules = [HeaderRule(header_name, **header_config)]
+        config = HeadersConfig(rules=rules)
         client = create_client(config)
 
         response = client.get("/", headers=request_headers)
