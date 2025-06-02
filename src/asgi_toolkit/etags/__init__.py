@@ -1,14 +1,10 @@
-from collections.abc import Sequence
 from http import HTTPStatus
 from enum import Enum, auto
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from typing import TypeAlias
-from collections.abc import Callable
 
 from asgi_toolkit.protocol import ASGIApp, Message, Receive, Scope, Send, HTTPResponseStartMessage
-
-ETagGenerator: TypeAlias = Callable[[bytes], str]
-Method: TypeAlias = str
-Path: TypeAlias = str
 
 
 class ConditionalEtagHeader(Enum):
@@ -16,34 +12,41 @@ class ConditionalEtagHeader(Enum):
     IF_NONE_MATCH = auto()
 
 
+Method: TypeAlias = str
+Path: TypeAlias = str
+ETagGenerator: TypeAlias = Callable[[bytes], str]
+
+
+@dataclass(slots=True, frozen=True)
+class ETagConfig:
+    etag_generator: ETagGenerator
+    ignore_paths: Sequence[tuple[Method, Path]] = field(default_factory=list)
+
+
 class ETagMiddleware:
     """ASGI middleware for HTTP ETag support with conditional requests."""
 
     __slots__ = (
         "app",
-        "etag_generator",
-        "ignore_paths",
+        "config",
     )
 
     def __init__(
         self,
         app: ASGIApp,
-        etag_generator: ETagGenerator,
-        ignore_paths: Sequence[tuple[Method, Path]] | None = None,
+        config: ETagConfig,
     ) -> None:
         """Initialize ETag middleware.
 
         Args:
             app: ASGI application to wrap
-            etag_generator: Function to generate ETags from response body
-            ignore_paths: Optional paths to skip ETag processing
+            config: ETag middleware configuration
         """
         self.app = app
-        self.etag_generator = etag_generator
-        self.ignore_paths = ignore_paths or []
+        self.config = config
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if not scope["type"] == "http" or (scope["method"], scope["path"]) in self.ignore_paths:
+        if not scope["type"] == "http" or (scope["method"], scope["path"]) in self.config.ignore_paths:
             await self.app(scope, receive, send)
             return
 
@@ -70,28 +73,9 @@ class ETagMiddleware:
                 send=send,
                 client_etag=client_etag,
                 conditional_header=conditional_header,
-                etag_generator=self.etag_generator,
+                etag_generator=self.config.etag_generator,
             ),
         )
-
-
-def etag_middleware(
-    etag_generator: ETagGenerator, ignore_paths: Sequence[tuple[Method, Path]] | None = None
-) -> Callable[[ASGIApp], ETagMiddleware]:
-    """Create an ETag middleware factory function.
-
-    Args:
-        etag_generator: Function to generate ETags from response body
-        ignore_paths: Optional sequence of (method, path) tuples to ignore
-
-    Returns:
-        A function that takes an ASGI app and returns ETagMiddleware
-    """
-
-    def middleware_factory(app: ASGIApp) -> ETagMiddleware:
-        return ETagMiddleware(app, etag_generator, ignore_paths)
-
-    return middleware_factory
 
 
 class ETagSendWrapper:

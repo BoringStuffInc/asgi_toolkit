@@ -44,11 +44,12 @@ def generate_etag(body: bytes) -> str:
     return f'"{hashlib.md5(body).hexdigest()}"'
 
 app = FastAPI()
-app.add_middleware(
-    ETagMiddleware,
+etag_config = ETagConfig(
     etag_generator=generate_etag,
     ignore_paths=[("POST", "/webhook")]
 )
+
+app.add_middleware(ETagMiddleware, config=etag_config)
 ```
 
 ### Header Middleware

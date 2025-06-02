@@ -1,11 +1,12 @@
 import hashlib
+from litestar.middleware.base import DefineMiddleware
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient as FastAPITestClient
 from litestar import Litestar, get
 from litestar.testing import TestClient as LitestarTestClient
 
-from asgi_toolkit.etags import ETagMiddleware, etag_middleware
+from asgi_toolkit.etags import ETagConfig, ETagMiddleware
 
 
 def simple_etag_generator(body: bytes) -> str:
@@ -14,6 +15,8 @@ def simple_etag_generator(body: bytes) -> str:
 
 @pytest.fixture(params=["fastapi", "litestar"])
 def client(request):
+    config = ETagConfig(etag_generator=simple_etag_generator, ignore_paths=[("GET", "/health")])
+
     match request.param:
         case "fastapi":
             app = FastAPI()
@@ -27,7 +30,7 @@ def client(request):
                 return {"status": "ok"}
 
             ignore_paths = [("GET", "/health")]
-            app.add_middleware(ETagMiddleware, etag_generator=simple_etag_generator, ignore_paths=ignore_paths)
+            app.add_middleware(ETagMiddleware, config=config)
             client = FastAPITestClient(app)
         case "litestar":
 
@@ -42,7 +45,7 @@ def client(request):
             ignore_paths = [("GET", "/health")]
             app = Litestar(
                 route_handlers=[read_root, health_check],
-                middleware=[etag_middleware(simple_etag_generator, ignore_paths=ignore_paths)],
+                middleware=[DefineMiddleware(ETagMiddleware, config=config)],
             )
             client = LitestarTestClient(app)
     return client
@@ -51,6 +54,8 @@ def client(request):
 @pytest.fixture(params=["fastapi", "litestar"])
 def client_with_counter(request):
     counter = {"value": 0}
+    config = ETagConfig(etag_generator=simple_etag_generator)
+
     if request.param == "fastapi":
         app = FastAPI()
 
@@ -59,7 +64,7 @@ def client_with_counter(request):
             counter["value"] += 1
             return {"message": f"hello world {counter['value']}"}
 
-        app.add_middleware(ETagMiddleware, etag_generator=simple_etag_generator)
+        app.add_middleware(ETagMiddleware, config=config)
         client = FastAPITestClient(app)
     else:  # litestar
 
@@ -68,7 +73,7 @@ def client_with_counter(request):
             counter["value"] += 1
             return {"message": f"hello world {counter['value']}"}
 
-        app = Litestar(route_handlers=[read_root], middleware=[etag_middleware(simple_etag_generator)])
+        app = Litestar(route_handlers=[read_root], middleware=[DefineMiddleware(ETagMiddleware, config=config)])
         client = LitestarTestClient(app)
     return client
 
@@ -146,42 +151,3 @@ class TestETagMiddleware:
     def test_non_http_requests_passthrough(self, client):
         response = client.get("/")
         assert_response_success(response)
-
-
-class TestETagMiddlewareFactory:
-    def test_factory_basic_functionality(self):
-        app = FastAPI()
-
-        @app.get("/")
-        def read_root():
-            return {"message": "hello world"}
-
-        app.add_middleware(ETagMiddleware, etag_generator=simple_etag_generator)
-        client = FastAPITestClient(app)
-
-        response = client.get("/")
-        assert_response_success(response)
-        assert_etag_present(response)
-
-    def test_factory_with_ignore_paths(self):
-        app = FastAPI()
-
-        @app.get("/")
-        def read_root():
-            return {"message": "hello world"}
-
-        @app.get("/health")
-        def health_check():
-            return {"status": "ok"}
-
-        ignore_paths = [("GET", "/health")]
-        app.add_middleware(ETagMiddleware, etag_generator=simple_etag_generator, ignore_paths=ignore_paths)
-        client = FastAPITestClient(app)
-
-        response = client.get("/")
-        assert_response_success(response)
-        assert_etag_present(response)
-
-        response = client.get("/health")
-        assert_response_success(response)
-        assert_etag_absent(response)
