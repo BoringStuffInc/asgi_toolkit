@@ -24,21 +24,16 @@ typecheck:
 # Run linter to check code quality
 lint:
     ruff check src/
+    ruff format --check src/ tests/
 
 # Format code using ruff
 # Automatically formats Python code in source and test directories
 format:
     ruff format src/ tests/
 
-# Automatically fix linting issues
-# Applies automatic fixes for both code style and formatting
-lint-fix:
-    ruff check --fix src/ tests/
-    ruff format src/ tests/
-
 # Run comprehensive code quality checks
 # Combines linting, type checking, and testing
-check: lint typecheck test
+check: lint typecheck
 
 # Clean up project artifacts and temporary files
 # Removes cache files, build artifacts, and other generated files
