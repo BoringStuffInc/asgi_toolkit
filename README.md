@@ -78,10 +78,18 @@ from fastapi import FastAPI
 from asgi_toolkit.rate_limiting import RateLimitMiddleware
 from asgi_toolkit.rate_limiting.backends import InMemoryBackend
 
-rate_limit_config = {
-    "/": {"rate": "10/minute"},
-    "/protected": {"rate": "5/minute"}
-}
+from asgi_toolkit.rate_limiting import RateLimitConfig, PolicyConfig
+
+rate_limit_config = RateLimitConfig(
+    default_limit=100,  # Default: 100 requests
+    default_window=60,  # Default: per 60 seconds
+    policy_overrides={
+        "/": PolicyConfig(limit=10, window=60),  # 10 requests per minute
+        "/protected": PolicyConfig(limit=5, window=60)  # 5 requests per minute
+    },
+    activation_header='X-RateLimit-Enabled',  # Optional activation header
+    whitelist={'127.0.0.1'}  # Optional IP whitelist
+)
 
 app = FastAPI()
 app.add_middleware(
